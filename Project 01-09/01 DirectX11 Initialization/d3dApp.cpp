@@ -145,7 +145,7 @@ void D3DApp::OnResize()
     HR(m_pSwapChain->ResizeBuffers(1, m_ClientWidth, m_ClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
     HR(m_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.GetAddressOf())));
     HR(m_pd3dDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, m_pRenderTargetView.GetAddressOf()));
-    
+
     // 设置调试对象名
     D3D11SetDebugObjectName(backBuffer.Get(), "BackBuffer[0]");
 
@@ -171,7 +171,7 @@ void D3DApp::OnResize()
         depthStencilDesc.SampleDesc.Count = 1;
         depthStencilDesc.SampleDesc.Quality = 0;
     }
-    
+
 
 
     depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -373,6 +373,72 @@ bool D3DApp::InitDirect3D()
 #if defined(DEBUG) || defined(_DEBUG)  
     createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
+    // 枚举适配器
+    ComPtr<IDXGIFactory1> dxgiFactory = nullptr;
+    HR(CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)dxgiFactory.GetAddressOf()));
+    
+    WCHAR desc[512];
+    
+    UINT adpaterIndex = 0;
+    IDXGIAdapter* adapter = nullptr;
+    DXGI_ADAPTER_DESC adapter_desc;
+    
+    UINT outputIndex = 0;
+    IDXGIOutput* output = nullptr;
+    DXGI_OUTPUT_DESC output_desc;
+    
+    UINT numModes = 0;
+    WCHAR mode_desc[128];
+
+    
+    while(dxgiFactory->EnumAdapters(adpaterIndex, &adapter) != DXGI_ERROR_NOT_FOUND)
+    {
+        adpaterIndex++;
+        adapter->GetDesc(&adapter_desc);
+        lstrcpyW(desc, adapter_desc.Description);
+
+        while (adapter->EnumOutputs(outputIndex, &output) != DXGI_ERROR_NOT_FOUND)
+        {
+            outputIndex++;
+            output->GetDesc(&output_desc);
+            lstrcatW(desc, L"\n\t");
+            lstrcatW(desc, output_desc.DeviceName);
+            
+            HR(output->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, 0, &numModes, NULL));
+            if (numModes > 0)
+            {
+                DXGI_MODE_DESC* mode_descs = new DXGI_MODE_DESC[numModes];
+                if (FAILED(output->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, 0, &numModes, mode_descs)))
+                {
+                    delete[] mode_descs;
+                    return false;
+                }
+
+                for (UINT index = 0; index < min(numModes, 3); index++)
+                {
+                    lstrcatW(desc, L"\n\t\t");
+                    swprintf(
+                        mode_desc, 
+                        L"size:%d x %d refreshRate: %d / %d", 
+                        mode_descs[index].Width, 
+                        mode_descs[index].Height, 
+                        mode_descs[index].RefreshRate.Numerator, mode_descs[index].RefreshRate.Denominator
+                    );
+                    lstrcatW(desc, mode_desc);
+                }
+
+                delete[] mode_descs;
+            }
+
+
+            output->Release();
+        }
+
+        MessageBox(0, desc, L"显卡", 0);
+
+        adapter->Release();
+    }
+
     // 驱动类型数组
     D3D_DRIVER_TYPE driverTypes[] =
     {
@@ -512,7 +578,7 @@ bool D3DApp::InitDirect3D()
         HR(dxgiFactory1->CreateSwapChain(m_pd3dDevice.Get(), &sd, m_pSwapChain.GetAddressOf()));
     }
 
-    
+
 
     // 可以禁止alt+enter全屏
     dxgiFactory1->MakeWindowAssociation(m_hMainWnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES);
