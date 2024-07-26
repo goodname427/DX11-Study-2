@@ -38,7 +38,7 @@ void GameApp::OnResize()
 
 void GameApp::UpdateScene(float dt)
 {
-    
+
     static float phi = 0.0f, theta = 0.0f;
     phi += 0.3f * dt, theta += 0.37f * dt;
     m_CBuffer.world = XMMatrixTranspose(XMMatrixRotationX(phi) * XMMatrixRotationY(theta));
@@ -59,7 +59,16 @@ void GameApp::DrawScene()
     m_pd3dImmediateContext->ClearDepthStencilView(m_pDepthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     // 绘制立方体
+    //m_pd3dImmediateContext->DrawIndexed(36, 0, 0);
+    
+    // 绘制四棱锥
+    //m_pd3dImmediateContext->DrawIndexed(18, 0, 0);
+
+    // 同时绘制
+    //m_pd3dImmediateContext->DrawIndexed(54, 0, 0);
     m_pd3dImmediateContext->DrawIndexed(36, 0, 0);
+    m_pd3dImmediateContext->DrawIndexed(18, 36, 8);
+    
     HR(m_pSwapChain->Present(0, 0));
 }
 
@@ -102,25 +111,53 @@ bool GameApp::InitResource()
         { XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
         { XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
         { XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) },
-        { XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }
+        { XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) },
+
+        // 四棱锥
+        /*{ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
+        { XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) },
+        { XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
+        { XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
+        { XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },*/
     };
+    // 偏移
+    /*int i = 0;
+    for (; i < 8; i++)
+    {
+        vertices[i].pos.x += 3;
+    }
+    for (; i < 13; i++)
+    {
+        vertices[i].pos.x -= 3;
+    }*/
+
     // 设置顶点缓冲区描述
-    D3D11_BUFFER_DESC vbd;
-    ZeroMemory(&vbd, sizeof(vbd));
-    vbd.Usage = D3D11_USAGE_IMMUTABLE;
-    vbd.ByteWidth = sizeof vertices;
-    vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    vbd.CPUAccessFlags = 0;
+    //D3D11_BUFFER_DESC vbd;
+    //ZeroMemory(&vbd, sizeof(vbd));
+    //vbd.Usage = D3D11_USAGE_IMMUTABLE;
+    //vbd.ByteWidth = sizeof vertices;
+    //vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    //vbd.CPUAccessFlags = 0;
     // 新建顶点缓冲区
     D3D11_SUBRESOURCE_DATA InitData;
     ZeroMemory(&InitData, sizeof(InitData));
-    InitData.pSysMem = vertices;
-    HR(m_pd3dDevice->CreateBuffer(&vbd, &InitData, m_pVertexBuffer.GetAddressOf()));
+    //InitData.pSysMem = vertices;
+    //HR(m_pd3dDevice->CreateBuffer(&vbd, &InitData, m_pVertexBuffer.GetAddressOf()));
+
+    // 创建动态缓冲区
+    D3D11_BUFFER_DESC vbd;
+    ZeroMemory(&vbd, sizeof(vbd));
+    vbd.Usage = D3D11_USAGE_DYNAMIC;
+    vbd.ByteWidth = sizeof vertices;
+    vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    vbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    HR(m_pd3dDevice->CreateBuffer(&vbd, nullptr , m_pVertexBuffer.GetAddressOf()));
 
     // ******************
     // 索引数组
     //
-    DWORD indices[] = {
+    DWORD indices[] =
+    {
         // 正面
         0, 1, 2,
         2, 3, 0,
@@ -138,8 +175,24 @@ bool GameApp::InitResource()
         6, 7, 3,
         // 底面
         4, 0, 3,
-        3, 7, 4
+        3, 7, 4,
+
+        // 四棱锥
+        // 底面
+        0, 2, 1,
+        0, 3, 2,
+        // 侧面
+        0, 4, 3,
+        3, 4, 2,
+        2, 4, 1,
+        1, 4, 0
     };
+    // 索引偏移
+    /*for (i = 36; i < 54; i++)
+    {
+        indices[i] += 8;
+    }*/
+
     // 设置索引缓冲区描述
     D3D11_BUFFER_DESC ibd;
     ZeroMemory(&ibd, sizeof(ibd));
@@ -206,6 +259,12 @@ bool GameApp::InitResource()
     D3D11SetDebugObjectName(m_pConstantBuffer.Get(), "ConstantBuffer");
     D3D11SetDebugObjectName(m_pVertexShader.Get(), "Cube_VS");
     D3D11SetDebugObjectName(m_pPixelShader.Get(), "Cube_PS");
+
+    // 动态更新顶点缓冲区
+    D3D11_MAPPED_SUBRESOURCE mappedData;
+    HR(m_pd3dImmediateContext->Map(m_pVertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData));
+    memcpy_s(mappedData.pData, sizeof(vertices), &vertices, sizeof(vertices));
+    m_pd3dImmediateContext->Unmap(m_pVertexBuffer.Get(), 0);
 
     return true;
 }
