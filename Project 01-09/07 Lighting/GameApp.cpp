@@ -124,6 +124,22 @@ void GameApp::UpdateScene(float dt)
         }
     }
     ImGui::End();
+
+    // 不允许在操作UI时操作物体
+    ImGuiIO& io = ImGui::GetIO();
+    if (!ImGui::IsAnyItemActive())
+    {
+        if (io.MouseWheel != 0.0f)
+        {
+            m_PSConstantBuffer.spotLight.spot += 1.0f * io.MouseWheel;
+            if (m_PSConstantBuffer.spotLight.spot > 512)
+                m_PSConstantBuffer.spotLight.spot = 512;
+            else if (m_PSConstantBuffer.spotLight.spot < 2)
+                m_PSConstantBuffer.spotLight.spot = 2;
+        }
+    }
+
+
     ImGui::Render();
 
     // 更新常量缓冲区，让立方体转起来
@@ -231,7 +247,9 @@ bool GameApp::InitResource()
     // 初始化用于PS的常量缓冲区的值
     m_PSConstantBuffer.material.ambient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
     m_PSConstantBuffer.material.diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    //m_PSConstantBuffer.material.diffuse = XMFLOAT4(1.0f, 0, 0, 1.0f);
     m_PSConstantBuffer.material.specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 5.0f);
+    //m_PSConstantBuffer.material.specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f);
     // 使用默认平行光
     m_PSConstantBuffer.dirLight = m_DirLight;
     // 注意不要忘记设置此处的观察位置，否则高亮部分会有问题

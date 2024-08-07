@@ -81,6 +81,7 @@ void GameApp::UpdateScene(float dt)
         static float phi = 0.0f, theta = 0.0f;
         phi += 0.0001f, theta += 0.00015f;
         XMMATRIX W = XMMatrixRotationX(phi) * XMMatrixRotationY(theta);
+        m_VSConstantBuffer.tex = XMMatrixTranspose(XMMatrixRotationY(theta));
         m_VSConstantBuffer.world = XMMatrixTranspose(W);
         m_VSConstantBuffer.worldInvTranspose = XMMatrixTranspose(InverseTranspose(W));
 
@@ -177,6 +178,8 @@ bool GameApp::InitResource()
 
     // 初始化木箱纹理
     HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"..\\Texture\\WoodCrate.dds", nullptr, m_pWoodCrate.GetAddressOf()));
+    HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"..\\Texture\\flare.dds", nullptr, m_pFlare.GetAddressOf()));
+    HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"..\\Texture\\flarealpha.dds", nullptr, m_pFlareAlpha.GetAddressOf()));
     // 初始化火焰纹理
     WCHAR strFile[40];
     m_pFireAnims.resize(120);
@@ -190,9 +193,16 @@ bool GameApp::InitResource()
     D3D11_SAMPLER_DESC sampDesc;
     ZeroMemory(&sampDesc, sizeof(sampDesc));
     sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    //sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    //sampDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+    /*sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
     sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;*/
+    sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+    sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+    sampDesc.BorderColor[0] = sampDesc.BorderColor[1] = sampDesc.BorderColor[2] = 0;
+    sampDesc.BorderColor[3] = 1;
     sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
     sampDesc.MinLOD = 0;
     sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
@@ -251,6 +261,8 @@ bool GameApp::InitResource()
     // 像素着色阶段设置好采样器
     m_pd3dImmediateContext->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
     m_pd3dImmediateContext->PSSetShaderResources(0, 1, m_pWoodCrate.GetAddressOf());
+    m_pd3dImmediateContext->PSSetShaderResources(1, 1, m_pFlare.GetAddressOf());
+    m_pd3dImmediateContext->PSSetShaderResources(2, 1, m_pFlareAlpha.GetAddressOf());
     m_pd3dImmediateContext->PSSetShader(m_pPixelShader3D.Get(), nullptr, 0);
     
     // ******************

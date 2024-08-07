@@ -14,6 +14,7 @@ public:
         DirectX::XMMATRIX view;
         DirectX::XMMATRIX proj;
         DirectX::XMMATRIX worldInvTranspose;
+        DirectX::XMMATRIX tex;
     };
 
     struct PSConstantBuffer
@@ -60,6 +61,8 @@ private:
     ShowMode m_CurrMode;										// 当前显示的模式
 
     ComPtr<ID3D11ShaderResourceView> m_pWoodCrate;			    // 木盒纹理
+    ComPtr<ID3D11ShaderResourceView> m_pFlare;			        // 火焰纹理
+    ComPtr<ID3D11ShaderResourceView> m_pFlareAlpha;			    // 火焰过滤纹理
     std::vector<ComPtr<ID3D11ShaderResourceView>> m_pFireAnims; // 火焰纹理集
     ComPtr<ID3D11SamplerState> m_pSamplerState;				    // 采样器状态
 

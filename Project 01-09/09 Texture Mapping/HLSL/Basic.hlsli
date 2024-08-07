@@ -1,6 +1,8 @@
 #include "LightHelper.hlsli"
 
 Texture2D g_Tex : register(t0);
+Texture2D g_TexFlare : register(t1);
+Texture2D g_TexFlareAlpha : register(t2);
 SamplerState g_SamLinear : register(s0);
 
 
@@ -10,6 +12,7 @@ cbuffer VSConstantBuffer : register(b0)
     matrix g_View;  
     matrix g_Proj;  
     matrix g_WorldInvTranspose;
+    matrix g_TexRotate;
 }
 
 cbuffer PSConstantBuffer : register(b1)
