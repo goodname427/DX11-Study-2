@@ -3,6 +3,16 @@
 #include <DXTrace.h>
 using namespace DirectX;
 
+template<class NumberType>
+NumberType Cycle(const NumberType& num, const NumberType& min, const NumberType& max)
+{
+    if (num > max)
+        return min;
+    else if (num < min)
+        return max;
+    return num;
+}
+
 GameApp::GameApp(HINSTANCE hInstance, const std::wstring& windowName, int initWidth, int initHeight)
     : D3DApp(hInstance, windowName, initWidth, initHeight),
     m_CameraMode(CameraMode::FirstPerson),
@@ -40,7 +50,7 @@ void GameApp::OnResize()
         m_pCamera->SetFrustum(XM_PI / 3, AspectRatio(), 0.5f, 1000.0f);
         m_pCamera->SetViewPort(0.0f, 0.0f, (float)m_ClientWidth, (float)m_ClientHeight);
         m_CBOnResize.proj = XMMatrixTranspose(m_pCamera->GetProjXM());
-        
+
         D3D11_MAPPED_SUBRESOURCE mappedData;
         HR(m_pd3dImmediateContext->Map(m_pConstantBuffers[2].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData));
         memcpy_s(mappedData.pData, sizeof(CBChangesOnResize), &m_CBOnResize, sizeof(CBChangesOnResize));
@@ -57,19 +67,21 @@ void GameApp::UpdateScene(float dt)
     Transform& woodCrateTransform = m_WoodCrate.GetTransform();
 
     ImGuiIO& io = ImGui::GetIO();
+
+    // 键盘输入
+    float d1 = 0.0f, d2 = 0.0f;
+    if (ImGui::IsKeyDown(ImGuiKey_W))
+        d1 += dt;
+    if (ImGui::IsKeyDown(ImGuiKey_S))
+        d1 -= dt;
+    if (ImGui::IsKeyDown(ImGuiKey_A))
+        d2 -= dt;
+    if (ImGui::IsKeyDown(ImGuiKey_D))
+        d2 += dt;
+
     if (m_CameraMode == CameraMode::FirstPerson || m_CameraMode == CameraMode::Free)
     {
         // 第一人称/自由摄像机的操作
-        float d1 = 0.0f, d2 = 0.0f;
-        if (ImGui::IsKeyDown(ImGuiKey_W))
-            d1 += dt;
-        if (ImGui::IsKeyDown(ImGuiKey_S))
-            d1 -= dt;
-        if (ImGui::IsKeyDown(ImGuiKey_A))
-            d2 -= dt;
-        if (ImGui::IsKeyDown(ImGuiKey_D))
-            d2 += dt;
-
         if (m_CameraMode == CameraMode::FirstPerson)
             cam1st->Walk(d1 * 6.0f);
         else
@@ -94,6 +106,47 @@ void GameApp::UpdateScene(float dt)
     }
     else if (m_CameraMode == CameraMode::ThirdPerson)
     {
+        // 计算前进方向和右方向
+        /*XMFLOAT3 lookAxis = cam3rd->GetLookAxis();
+        lookAxis.y = 0;
+        XMVECTOR frontVec = XMVector3Normalize(XMLoadFloat3(&lookAxis));
+        XMVECTOR rightVec = XMVector3Cross(g_XMIdentityR1, frontVec);*/
+
+        // 计算木箱位置
+        /*XMFLOAT3 pos = woodCrateTransform.GetPosition();
+        XMVECTOR posVec = XMLoadFloat3(&pos);
+        posVec = XMVectorAdd(posVec, frontVec * d1);
+        posVec = XMVectorAdd(posVec, rightVec * d2);*/
+
+        // 计算前进方向
+        static float yaw = 0.0f;
+        static float pitch = 0.0f;
+        static float maxRad = XM_PI * 2;
+        yaw = Cycle(yaw - d2 * 5.0f, 0.0f, maxRad);
+        pitch = Cycle(pitch - d1 * 5.0f, 0.0f, maxRad);
+
+        XMVECTOR frontVec = XMVectorSet(cos(yaw), 0, sin(yaw), 0);
+        XMVECTOR realFrontVec = XMVectorSet(cos(pitch) * cos(yaw), sin(pitch), cos(pitch) * sin(yaw), 0);
+
+        // 前进
+        XMFLOAT3 pos = woodCrateTransform.GetPosition();
+        XMVECTOR posVec = XMLoadFloat3(&pos);
+        posVec = XMVectorAdd(posVec, frontVec * d1 * 5.0f);
+        XMStoreFloat3(&pos, posVec);
+        woodCrateTransform.SetPosition(pos);
+
+        // 确定欧拉角
+        XMVECTOR upVec = XMVector3Cross(frontVec, g_XMIdentityR1);
+        XMVECTOR rightVec = XMVector3Cross(upVec, realFrontVec);
+        XMMATRIX rotationMat;
+        rotationMat.r[0] = rightVec;
+        rotationMat.r[1] = upVec;
+        rotationMat.r[2] = realFrontVec;
+        XMFLOAT4X4 rotation;
+        XMStoreFloat4x4(&rotation, rotationMat);
+        // 设置转向
+        woodCrateTransform.SetRotation(woodCrateTransform.GetEulerAnglesFromRotationMatrix(rotation));
+
         // 第三人称摄像机的操作
         cam3rd->SetTarget(woodCrateTransform.GetPosition());
 
@@ -260,17 +313,19 @@ bool GameApp::InitResource()
     ComPtr<ID3D11ShaderResourceView> texture;
     // 初始化木箱
     HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"..\\Texture\\WoodCrate.dds", nullptr, texture.GetAddressOf()));
-    m_WoodCrate.SetBuffer(m_pd3dDevice.Get(), Geometry::CreateBox());
+    //m_WoodCrate.SetBuffer(m_pd3dDevice.Get(), Geometry::CreateBox());
+    // 改成圆柱体
+    m_WoodCrate.SetBuffer(m_pd3dDevice.Get(), Geometry::CreateCylinder());
     m_WoodCrate.SetTexture(texture.Get());
-    
+
     // 初始化地板
     HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"..\\Texture\\floor.dds", nullptr, texture.ReleaseAndGetAddressOf()));
     m_Floor.SetBuffer(m_pd3dDevice.Get(),
         Geometry::CreatePlane(XMFLOAT2(20.0f, 20.0f), XMFLOAT2(5.0f, 5.0f)));
     m_Floor.SetTexture(texture.Get());
     m_Floor.GetTransform().SetPosition(0.0f, -1.0f, 0.0f);
-    
-    
+
+
     // 初始化墙体
     m_Walls.resize(4);
     HR(CreateDDSTextureFromFile(m_pd3dDevice.Get(), L"..\\Texture\\brick.dds", nullptr, texture.ReleaseAndGetAddressOf()));
@@ -284,7 +339,7 @@ bool GameApp::InitResource()
         transform.SetPosition(i % 2 ? -10.0f * (i - 2) : 0.0f, 3.0f, i % 2 == 0 ? -10.0f * (i - 1) : 0.0f);
         m_Walls[i].SetTexture(texture.Get());
     }
-        
+
     // 初始化采样器状态
     D3D11_SAMPLER_DESC sampDesc;
     ZeroMemory(&sampDesc, sizeof(sampDesc));
@@ -297,7 +352,7 @@ bool GameApp::InitResource()
     sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
     HR(m_pd3dDevice->CreateSamplerState(&sampDesc, m_pSamplerState.GetAddressOf()));
 
-    
+
     // ******************
     // 初始化常量缓冲区的值
     // 初始化每帧可能会变化的值
@@ -401,7 +456,7 @@ const Transform& GameApp::GameObject::GetTransform() const
 }
 
 template<class VertexType, class IndexType>
-void GameApp::GameObject::SetBuffer(ID3D11Device * device, const Geometry::MeshData<VertexType, IndexType>& meshData)
+void GameApp::GameObject::SetBuffer(ID3D11Device* device, const Geometry::MeshData<VertexType, IndexType>& meshData)
 {
     // 释放旧资源
     m_pVertexBuffer.Reset();
@@ -438,12 +493,12 @@ void GameApp::GameObject::SetBuffer(ID3D11Device * device, const Geometry::MeshD
 
 }
 
-void GameApp::GameObject::SetTexture(ID3D11ShaderResourceView * texture)
+void GameApp::GameObject::SetTexture(ID3D11ShaderResourceView* texture)
 {
     m_pTexture = texture;
 }
 
-void GameApp::GameObject::Draw(ID3D11DeviceContext * deviceContext)
+void GameApp::GameObject::Draw(ID3D11DeviceContext* deviceContext)
 {
     // 设置顶点/索引缓冲区
     UINT strides = m_VertexStride;
