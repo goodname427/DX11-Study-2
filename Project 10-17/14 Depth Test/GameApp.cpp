@@ -202,8 +202,8 @@ void GameApp::DrawScene()
     // 4. 绘制需要混合的反射闪电动画和透明物体
     //
 
-    //m_BasicEffect.SetDrawBoltAnimNoDepthWriteWithStencil(m_pd3dImmediateContext.Get(), 1);
-    m_BasicEffect.SetDrawBoltAnimNoDepthTestWithStencil(m_pd3dImmediateContext.Get(), 1);
+    m_BasicEffect.SetDrawBoltAnimNoDepthWriteWithStencil(m_pd3dImmediateContext.Get(), 1);
+    // m_BasicEffect.SetDrawBoltAnimNoDepthTestWithStencil(m_pd3dImmediateContext.Get(), 1);
     m_BoltAnim.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
 
     m_BasicEffect.SetReflectionState(false);		// 反射关闭
@@ -235,8 +235,8 @@ void GameApp::DrawScene()
 
     // ******************
     // 7. 绘制需要混合的闪电动画
-    //m_BasicEffect.SetDrawBoltAnimNoDepthWrite(m_pd3dImmediateContext.Get());
-    m_BasicEffect.SetDrawBoltAnimNoDepthTest(m_pd3dImmediateContext.Get());
+    m_BasicEffect.SetDrawBoltAnimNoDepthWrite(m_pd3dImmediateContext.Get());
+    // m_BasicEffect.SetDrawBoltAnimNoDepthTest(m_pd3dImmediateContext.Get());
     m_BoltAnim.Draw(m_pd3dImmediateContext.Get(), m_BasicEffect);
 
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
