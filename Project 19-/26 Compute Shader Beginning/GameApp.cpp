@@ -46,6 +46,8 @@ void GameApp::Compute()
 //#endif
     
     SaveDDSTextureToFile(m_pd3dImmediateContext.Get(), m_pTextureOutput.Get(), L"..\\Texture\\flareoutput.dds");
+    //SaveDDSTextureToFile(m_pd3dImmediateContext.Get(), m_pTextureOutput.Get(), L"..\\Texture\\flareoutput_16_16.dds");
+    //SaveDDSTextureToFile(m_pd3dImmediateContext.Get(), m_pTextureOutput.Get(), L"..\\Texture\\flareoutput_diff.dds");
     MessageBox(nullptr, L"请打开..\\Texture文件夹观察输出文件flareoutput.dds", L"运行结束", MB_OK);
 }
 

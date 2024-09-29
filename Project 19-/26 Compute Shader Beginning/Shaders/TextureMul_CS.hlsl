@@ -17,4 +17,5 @@ RWTexture2D<unorm float4> g_Output : register(u0);
 void CS( uint3 DTid : SV_DispatchThreadID )
 {
     g_Output[DTid.xy] = g_TexA[DTid.xy] * g_TexB[DTid.xy];
+    //g_Output[DTid.xy] = (g_TexA[DTid.xy] - g_TexB[DTid.xy]) * 0.5 + 0.5;
 }
